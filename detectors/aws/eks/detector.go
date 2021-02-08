@@ -63,12 +63,6 @@ type data struct {
 	ClusterName string `json:"cluster.name"`
 }
 
-// Compile time assertion that ResourceDetector implements the resource.Detector interface.
-//var _ resource.Detector = (*ResourceDetector)(nil)
-
-//// Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
-//var _ detectorUtils = (*eksDetectorUtils)(nil)
-
 // Detect returns a Resource describing the Amazon EKS environment being run in.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
