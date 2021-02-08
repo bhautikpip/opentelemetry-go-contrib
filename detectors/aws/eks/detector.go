@@ -44,18 +44,18 @@ const (
 )
 
 // detectorUtils is used for testing the ResourceDetector by abstracting functions that rely on external systems.
-type detectorUtils interface {
+type detectorUtilsResources interface {
 	fileExists(filename string) bool
 	fetchString(httpMethod string, URL string) (string, error)
 	getContainerID() (string, error)
 }
 
 // This struct will implement the detectorUtils interface
-type eksDetectorUtils struct{}
+type DetectorUtils struct{}
 
 // ResourceDetector for detecting resources running on Amazon EKS
 type ResourceDetector struct {
-	utils detectorUtils
+	Utils detectorUtilsResources
 }
 
 // This struct will help unmarshal clustername from JSON response
@@ -64,15 +64,15 @@ type data struct {
 }
 
 // Compile time assertion that ResourceDetector implements the resource.Detector interface.
-var _ resource.Detector = (*ResourceDetector)(nil)
+//var _ resource.Detector = (*ResourceDetector)(nil)
 
-// Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
-var _ detectorUtils = (*eksDetectorUtils)(nil)
+//// Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
+//var _ detectorUtils = (*eksDetectorUtils)(nil)
 
 // Detect returns a Resource describing the Amazon EKS environment being run in.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
-	isEks, err := isEKS(detector.utils)
+	isEks, err := isEKS(detector.Utils)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	labels := []label.KeyValue{}
 
 	// Get clusterName and append to labels
-	clusterName, err := getClusterName(detector.utils)
+	clusterName, err := getClusterName(detector.Utils)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	// Get containerID and append to labels
-	containerID, err := detector.utils.getContainerID()
+	containerID, err := detector.Utils.getContainerID()
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 }
 
 // isEKS checks if the current environment is running in EKS.
-func isEKS(utils detectorUtils) (bool, error) {
+func isEKS(utils detectorUtilsResources) (bool, error) {
 	if !isK8s(utils) {
 		return false, nil
 	}
@@ -124,18 +124,18 @@ func isEKS(utils detectorUtils) (bool, error) {
 }
 
 // isK8s checks if the current environment is running in a Kubernetes environment
-func isK8s(utils detectorUtils) bool {
+func isK8s(utils detectorUtilsResources) bool {
 	return utils.fileExists(k8sTokenPath) && utils.fileExists(k8sCertPath)
 }
 
 // fileExists checks if a file with a given filename exists.
-func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
+func (eksUtils DetectorUtils) fileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	return err == nil && !info.IsDir()
 }
 
 // fetchString executes an HTTP request with a given HTTP Method and URL string.
-func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (string, error) {
+func (eksUtils DetectorUtils) fetchString(httpMethod string, URL string) (string, error) {
 	request, err := http.NewRequest(httpMethod, URL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create new HTTP request with method=%s, URL=%s: %w", httpMethod, URL, err)
@@ -191,7 +191,7 @@ func getK8sCredHeader() (string, error) {
 }
 
 // getClusterName retrieves the clusterName resource attribute
-func getClusterName(utils detectorUtils) (string, error) {
+func getClusterName(utils detectorUtilsResources) (string, error) {
 	resp, err := utils.fetchString("GET", k8sSvcURL+cwConfigmapPath)
 	if err != nil {
 		return "", fmt.Errorf("getClusterName() error: %w", err)
@@ -215,7 +215,7 @@ func getClusterName(utils detectorUtils) (string, error) {
 }
 
 // getContainerID returns the containerID if currently running within a container.
-func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
+func (eksUtils DetectorUtils) getContainerID() (string, error) {
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
 		return "", fmt.Errorf("getContainerID() error: cannot read file with path %s: %w", defaultCgroupPath, err)
